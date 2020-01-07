@@ -45,7 +45,7 @@ def main():
                 "name": name,
                 "type": "prometheus",
                 "url": cluster["ClusterDataSourceUrl"],
-                "access": "server",
+                "access": "proxy",
                 "basicAuth": True,
                 "basicAuthUser": cluster["BasicAuthUsername"],
                 "basicAuthPassword": cluster["BasicAuthPassword"],
@@ -72,5 +72,5 @@ def main():
 
 
 if __name__ == "__main__":
-    __version__ = "0.0.1"
+    __version__ = "0.0.2"
     main()
