@@ -1,0 +1,83 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: No
+  vars:
+  - grafana_namespace: "grafana-monitoring"
+  - grafana_operator_version: "v2.0.0"
+  tasks:
+  - name: Ensure Grafana project namespace exists
+    k8s:
+      name: "{{ grafana_namespace }}"
+      api_version: v1
+      kind: Namespace
+      state: present
+
+  - name: Ensure OperatorGroup exists in the target namespace
+    k8s:
+      state: present
+      definition:
+        apiVersion: operators.coreos.com/v1
+        kind: OperatorGroup
+        metadata:
+          name: "{{ grafana_namespace }}"
+          namespace: "{{ grafana_namespace }}"
+        spec:
+          targetNamespaces:
+            - "{{ grafana_namespace }}"
+
+  - name: Ensure Grafana Operator Subscription exists
+    k8s:
+      state: present
+      definition:
+        apiVersion: operators.coreos.com/v1alpha1
+        kind: Subscription
+        metadata:
+          name: grafana-operator
+          namespace: "{{ grafana_namespace }}"
+        spec:
+          channel: alpha
+          installPlanApproval: Automatic
+          name: grafana-operator
+          source: community-operators
+          sourceNamespace: openshift-marketplace
+          startingCSV: "grafana-operator.{{ grafana_operator_version }}"
+
+  - name: Ensure Grafana instance exists
+    k8s:
+      state: present
+      definition:
+        apiVersion: integreatly.org/v1alpha1
+        kind: Grafana
+        metadata:
+          name: grafana-monitor
+          namespace: "{{ grafana_namespace }}"
+        spec:
+          ingress:
+            enabled: true
+            tlsEnabled: true
+            termination: edge
+            annotations:
+              haproxy.router.openshift.io/ip_whitelist: 37.26.88.73 37.26.92.73 37.26.88.93 37.26.92.93
+          dataStorage:
+            accessModes:
+            - ReadWriteOnce
+            size: 50Gi
+            class: standard
+          config:
+            auth:
+              disable_signout_menu: false
+            auth.anonymous:
+              enabled: false
+            log:
+              level: warn
+              mode: console
+            security:
+              admin_password: BwaFjoi9tLUrX!
+              admin_user: grafana-admin
+          dashboardLabelSelector:
+            - matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - grafana
