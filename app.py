@@ -42,7 +42,7 @@ def main():
             name = "{}-{}".format(customer, clustername)
             datasource_info.append([name, clustername])
 
-            logging.debug("Creating data source for customer: {} cluster: {}".format(customer, clustername))
+            logging.debug(f"Creating data source for customer: {customer} cluster: {clustername}")
             datasource = {
                 "name": name,
                 "type": "prometheus",
@@ -55,18 +55,21 @@ def main():
             }
             try:
                 resp = grafana_request(session, sub_endpoint="/api/datasources", method="POST", json=datasource)
-                logging.debug(f"JSON response for data source creation: data source: {cluster["ClusterDataSourceUrl"]} "
-                              "JSON payload: {resp}")
+                logging.debug(f"JSON response for data source creation: data source: {cluster['ClusterDataSourceUrl']}\n"
+                              f"JSON payload: {resp}")
                 # Sleep for a second to avoid Grafana raising 409 conflict error.
                 sleep(1)
             except HTTPError as err:
-                logging.debug(f"Failed to create Grafana data source: {err}\nJSON payload: {datasource}")
+                logging.debug(f"Failed to create Grafana data source: {err}\n"
+                              f"JSON payload: {datasource}")
         dashboard = create_template(datasource_info, customer)
         try:
             resp = grafana_request(session, sub_endpoint="/api/dashboards/db", method="POST", data=dashboard)
-            logging.debug(f"JSON response for dashboard creation: dashboard: {customer}\nJSON payload: {resp}")
+            logging.debug(f"JSON response for dashboard creation: dashboard: {customer}\n"
+                          f"JSON payload: {resp}")
         except HTTPError as err:
-            logging.debug(f"Failed to create Grafana dashboard: {err}\nJSON payload: {dashboard}")
+            logging.debug(f"Failed to create Grafana dashboard: {err}\n"
+                          f"JSON payload: {dashboard}")
     session.close()
 
 
