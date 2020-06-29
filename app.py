@@ -1,9 +1,16 @@
+#!/usr/bin/env python3
+"""
+    Create Grafana dashboards in Grafana in the management cluster for
+    all customer clusters.
+"""
+
 try:
     from utils import get_env_vars, grafana_request, create_template
     from requests_toolbelt import sessions
     from requests import HTTPError
     import yaml
     import logging
+    import os
     from sys import stdout
     from time import sleep
 except ImportError as err:
@@ -11,35 +18,30 @@ except ImportError as err:
 
 
 def main():
-    # Setup logfile and stdout logging.
     logging.basicConfig(filename="grafana_setup.log", level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler(stdout))
-    # Load required environment variables.
-    ENV_VARS = get_env_vars()
-    logging.debug("Environment variables are: {}".format(ENV_VARS))
-    # Load env variable as YAML structure.
-    customer_datasources = yaml.safe_load(ENV_VARS[0])
-    # Init requests.Session() object.
-    session = sessions.BaseUrlSession(base_url=ENV_VARS[2])
-    # All subsequent requests will use these headers.
+
+    dashboard_sources = yaml.safe_load(os.environ['DASHBOARD_SOURCES'])
+
+    session = sessions.BaseUrlSession(base_url=os.environ['GRAFANA_URL'])
     session.headers.update(
         {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": "Bearer {}".format(ENV_VARS[1]),
+            "Authorization": f"Bearer {os.environ['GRAFANA_API_TOKEN']}",
         }
     )
-    # Loop over data sources, creating a data source for the number of clusters in the YAML structure.
-    # Also, create dashboard with panels.
-    for customer in customer_datasources["Customers"]:
-        # Define datasource_info list for template creation.
+
+    for customer in dashboard_sources["Customers"]:
         datasource_info = []
-        for cluster in customer_datasources["Customers"][customer]:
-            clustername = cluster["ClusterDataSourceUrl"].split("prometheus.")[1].strip("/")
+        for cluster in dashboard_sources["Customers"][customer]:
+            # v3 urls like https://prometheus.<domainSuffix>
+            # v4 urls like https://prometheus-k8s-openshift-monitoring.apps.<domainSuffix>
+            # domainSuffix like 1234-567890.reg00001-1.cna.ukcloud.com
+            clustername = ".".join(cluster["ClusterDataSourceUrl"].split(".")[-5:])
             name = "{}-{}".format(customer, clustername)
-            # Add data source name to list.
             datasource_info.append([name, clustername])
-            # Create data source.
+
             logging.debug("Creating data source for customer: {} cluster: {}".format(customer, clustername))
             datasource = {
                 "name": name,
@@ -52,25 +54,22 @@ def main():
                 "isDefault": False
             }
             try:
-                # Send request to create Grafana data source.
                 resp = grafana_request(session, sub_endpoint="/api/datasources", method="POST", json=datasource)
-                logging.debug("JSON response for data source creation: data source: {}\n JSON payload: {}".format(cluster["ClusterDataSourceUrl"], resp))
+                logging.debug(f"JSON response for data source creation: data source: {cluster["ClusterDataSourceUrl"]} "
+                              "JSON payload: {resp}")
                 # Sleep for a second to avoid Grafana raising 409 conflict error.
                 sleep(1)
             except HTTPError as err:
-                logging.debug("Request to create Grafana data source failed: {}\nJSON payload: {}".format(err, datasource))
-        # Create dashboard JSON using Jinja2 template engine.
+                logging.debug(f"Failed to create Grafana data source: {err}\nJSON payload: {datasource}")
         dashboard = create_template(datasource_info, customer)
         try:
-            # Send request to create Grafana dashboard.
             resp = grafana_request(session, sub_endpoint="/api/dashboards/db", method="POST", data=dashboard)
-            logging.debug("JSON response for dashboard creation: dashboard: {}\nJSON payload: {}".format(customer, resp))
+            logging.debug(f"JSON response for dashboard creation: dashboard: {customer}\nJSON payload: {resp}")
         except HTTPError as err:
-            logging.debug("Request to create Grafana dashboard failed: {}\nJSON payload: {}".format(err, dashboard))
-    # Close HTTP session once finished.
+            logging.debug(f"Failed to create Grafana dashboard: {err}\nJSON payload: {dashboard}")
     session.close()
 
 
 if __name__ == "__main__":
-    __version__ = "0.0.2"
+    __version__ = "1.0.0"
     main()

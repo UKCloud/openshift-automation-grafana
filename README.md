@@ -56,7 +56,7 @@ The purpose of this script is to automate the creation of dashboards and their r
 
     ```bash
     Secret=$(oc get secret customer-secret -o "jsonpath={.data['customer_clusters\.yaml']}" | base64 --decode) && oc new-app python:3.6~https://github.com/UKCloud/openshift-automation-grafana.git \
-        -e OPENSHIFT_SECRET=$Secret \
-        -e GRAFANA_API_KEY="API key here." \
-        -e GRAFANA_HOST="https://grafanahost.com"
+        -e DASHBOARD_SOURCES=$Secret \
+        -e GRAFANA_API_TOKEN="API token here." \
+        -e GRAFANA_URL="https://grafanaurl.ukcloud.uk"
     ```
