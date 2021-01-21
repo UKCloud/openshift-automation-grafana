@@ -2,13 +2,14 @@ try:
     import os
     import requests
     import jinja2
+    import json
 except ImportError as err:
     raise ImportError("Failed to import required modules: {}".format(err))
 
 
-def create_template(datasource_info: list, customer: str):
+def create_customer_template(datasource_info: list, customer: str):
     """
-    Create the Grafana dashboard JSON given a nested list of data source information.
+    Create the Grafana customer dashboard JSON given a nested list of data source information.
     :param datasource_info: A nested list containing information about the data sources.
     :param customer: The name of the customer, used in dashboard generation.
     :rtype: u'str'.
@@ -20,6 +21,15 @@ def create_template(datasource_info: list, customer: str):
     dashboard = template.render(title=customer, datasource_names=datasource_info)
     return dashboard
 
+
+def create_admin_template():
+    """
+    Loads json file to create admin dashboard.
+    """
+    with open('templates/admindashboard.json', 'r') as myfile:
+        admin_dashboard = myfile.read()
+    return admin_dashboard
+    
 
 def get_env_vars():
     """

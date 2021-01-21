@@ -5,7 +5,7 @@
 """
 
 try:
-    from utils import get_env_vars, grafana_request, create_template
+    from utils import get_env_vars, grafana_request, create_customer_template, create_admin_template
     from requests_toolbelt import sessions
     from requests import HTTPError
     import yaml
@@ -62,7 +62,7 @@ def main():
             except HTTPError as err:
                 logging.debug(f"Failed to create Grafana data source: {err}\n"
                               f"JSON payload: {datasource}")
-        dashboard = create_template(datasource_info, customer)
+        dashboard = create_customer_template(datasource_info, customer)
         try:
             resp = grafana_request(session, sub_endpoint="/api/dashboards/db", method="POST", data=dashboard)
             logging.debug(f"JSON response for dashboard creation: dashboard: {customer}\n"
@@ -70,6 +70,14 @@ def main():
         except HTTPError as err:
             logging.debug(f"Failed to create Grafana dashboard: {err}\n"
                           f"JSON payload: {dashboard}")
+    admin_dashboard = create_admin_template()
+    try:
+        resp = grafana_request(session, sub_endpoint="/api/dashboards/import", method="POST", data=admin_dashboard)
+        logging.debug(f"JSON response for admin dashboard creation \n"
+                      f"JSON payload: {resp}")
+    except HTTPError as err:
+        logging.debug(f"Failed to create Grafana dashboard: {err}\n"
+                      f"JSON payload: {dashboard}")
     session.close()
 
 

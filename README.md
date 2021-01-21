@@ -55,8 +55,8 @@ The purpose of this script is to automate the creation of dashboards and their r
 5. Deploy this app in OpenShift using the following command:
 
     ```bash
-    Secret=$(oc get secret customer-secret -o "jsonpath={.data['customer_clusters\.yaml']}" | base64 --decode) && oc new-app python:3.6~https://github.com/UKCloud/openshift-automation-grafana.git \
-        -e DASHBOARD_SOURCES=$Secret \
+    secret=$(oc get secret customer-secret -o "jsonpath={.data['customer-clusters\.yaml']}" | base64 --decode) && oc new-app python:3.6~https://github.com/UKCloud/openshift-automation-grafana.git \
+        -e DASHBOARD_SOURCES="$secret" \
         -e GRAFANA_API_TOKEN="API token here." \
         -e GRAFANA_URL="https://grafanaurl.ukcloud.uk"
     ```
